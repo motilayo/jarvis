@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package jarvis.v1;
+
+option go_package = "github.com/motilayo/jarvis/server";
+
+service CommandStream {
+  rpc ServerStream(stream Request) returns (stream Response);
+}
+
+message Response {
+  string nodeName = 1;
+  CommandResult result = 2;
+}
+
+message Request {
+  CommandRequest command = 1;
+}
+
+message CommandRequest {
+  string id = 1;
+  string cmd = 2;
+}
+
+message CommandResult {
+  string id = 1;
+  string output = 2;
+  int32 exitCode = 3;
+}
