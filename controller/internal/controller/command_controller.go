@@ -30,7 +30,6 @@ import (
 
 	jarvisiov1 "github.com/motilayo/jarvis/controller/api/v1"
 
-	agentclient "github.com/motilayo/jarvis/controller/client"
 )
 
 // CommandReconciler reconciles a Command object
@@ -85,7 +84,7 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// Run command concurrently on each node
 		go func(nodeName, nodeIP string) {
 			// The agentclient.RunCommandOnNode helper is assumed to be available in the project
-			output, err := agentclient.RunCommandOnNode(ctx, nodeIP, cmd.Spec.Command)
+			output, err := client.RunCommandOnNode(ctx, nodeIP, cmd.Spec.Command)
 			if err != nil {
 				log.Error(err, "Command execution failed", "node", nodeName)
 				r.Recorder.Eventf(cmd, corev1.EventTypeWarning, "CommandFailed",

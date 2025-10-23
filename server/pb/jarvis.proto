@@ -6,6 +6,7 @@ option go_package = "github.com/motilayo/jarvis/server";
 
 service CommandStream {
   rpc ServerStream(stream Request) returns (stream Response);
+  rpc 
 }
 
 message Response {
