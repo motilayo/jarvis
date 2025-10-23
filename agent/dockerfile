@@ -1,0 +1,30 @@
+# Stage 1: build
+FROM golang:1.25 AS builder
+
+WORKDIR /app
+
+# Copy go module files and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the source
+COPY pb/ ./pb
+COPY main.go ./
+
+# Build the gRPC server binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o jarvis-server main.go
+
+
+# Stage 2: minimal runtime image
+FROM gcr.io/distroless/base-debian12
+
+WORKDIR /app
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/jarvis-server .
+
+# The gRPC server listens on port 50051
+EXPOSE 50051
+
+# Run the server
+ENTRYPOINT ["/app/jarvis-server"]

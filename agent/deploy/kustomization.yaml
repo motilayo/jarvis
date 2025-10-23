@@ -1,0 +1,5 @@
+namespace: jarvis
+resources:
+- ns.yaml
+- daemonset.yaml
+- serviceaccount.yaml
