@@ -26,10 +26,12 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	jarvisiov1 "github.com/motilayo/jarvis/controller/api/v1"
 
+	grpcClient "github.com/motilayo/jarvis/controller/client"
 )
 
 // CommandReconciler reconciles a Command object
@@ -38,6 +40,8 @@ type CommandReconciler struct {
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 }
+
+var finalizer = "jarvis.io/finalizer"
 
 // +kubebuilder:rbac:groups=jarvis.io,resources=commands,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=jarvis.io,resources=commands/status,verbs=get;update;patch
@@ -52,6 +56,20 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		log.Error(err, "Unable to fetch Command")
 		return ctrl.Result{}, err
+	}
+
+	if cmd.DeletionTimestamp != nil && controllerutil.ContainsFinalizer(cmd, finalizer) {
+		controllerutil.RemoveFinalizer(cmd, finalizer)
+		if err := r.Update(ctx, cmd); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if !controllerutil.ContainsFinalizer(cmd, finalizer) {
+		controllerutil.AddFinalizer(cmd, finalizer)
+		if err := r.Update(ctx, cmd); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	log.Info("Reconciling Command", "name", cmd.Name, "namespace", cmd.Namespace, "command", cmd.Spec.Command)
@@ -84,7 +102,7 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// Run command concurrently on each node
 		go func(nodeName, nodeIP string) {
 			// The agentclient.RunCommandOnNode helper is assumed to be available in the project
-			output, err := client.RunCommandOnNode(ctx, nodeIP, cmd.Spec.Command)
+			output, err := grpcClient.RunCommandOnNode(ctx, nodeIP, cmd.Spec.Command)
 			if err != nil {
 				log.Error(err, "Command execution failed", "node", nodeName)
 				r.Recorder.Eventf(cmd, corev1.EventTypeWarning, "CommandFailed",

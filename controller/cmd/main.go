@@ -17,18 +17,13 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
-	"fmt"
-	"io"
 	"os"
-	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,8 +39,6 @@ import (
 	corev1 "github.com/motilayo/jarvis/controller/api/v1"
 	jarvisiov1 "github.com/motilayo/jarvis/controller/api/v1"
 	"github.com/motilayo/jarvis/controller/internal/controller"
-	pb "github.com/motilayo/jarvis/server/pb"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -211,48 +204,4 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func RunCommandOnNode(ctx context.Context, nodeIP, command string) (string, error) {
-	addr := fmt.Sprintf("%s:50051", nodeIP)
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Error("failed to connect: %v", err)
-	}
-	defer conn.Close()
-
-	client := pb.NewCommandStreamClient(conn)
-
-	stream, err := client.ServerStream(ctx)
-	if err != nil {
-		log("failed to open stream: %v", err)
-	}
-
-	// Send command request
-	req := &pb.Request{
-		Command: &pb.CommandRequest{
-			Id:  fmt.Sprintf("cmd-%d", time.Now().UnixNano()),
-			Cmd: command,
-		},
-	}
-
-	if err := stream.Send(req); err != nil {
-		return "", fmt.Errorf("failed to send command: %w", err)
-	}
-
-	// Read streamed responses
-	output := ""
-	for {
-		resp, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("recv error: %v", err)
-		}
-		output = fmt.Sprintf("[%s] ❯ %s\n%s",
-			resp.NodeName, req.Command.Cmd, resp.Result.Output)
-	}
-
-	return output, nil
 }
