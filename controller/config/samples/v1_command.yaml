@@ -5,5 +5,11 @@ metadata:
     app.kubernetes.io/name: controller
     app.kubernetes.io/managed-by: kustomize
   name: command-sample
+  namespace: jarvis
 spec:
-  # TODO(user): Add fields here
+  command: curl -k google.com
+  selector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: DoesNotExist

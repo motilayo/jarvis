@@ -245,9 +245,11 @@ const file_jarvis_proto_rawDesc = "" +
 	"\rCommandResult\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06output\x18\x02 \x01(\tR\x06output\x12\x1a\n" +
-	"\bexitCode\x18\x03 \x01(\x05R\bexitCode2L\n" +
-	"\rCommandStream\x12;\n" +
-	"\fServerStream\x12\x12.jarvis.v1.Request\x1a\x13.jarvis.v1.Response(\x010\x01B\"Z github.com/motilayo/jarvis/agentb\x06proto3"
+	"\bexitCode\x18\x03 \x01(\x05R\bexitCode2\x83\x01\n" +
+	"\x06Jarvis\x126\n" +
+	"\aConnect\x12\x12.jarvis.v1.Request\x1a\x13.jarvis.v1.Response(\x010\x01\x12A\n" +
+	"\n" +
+	"RunCommand\x12\x19.jarvis.v1.CommandRequest\x1a\x18.jarvis.v1.CommandResultB\"Z github.com/motilayo/jarvis/agentb\x06proto3"
 
 var (
 	file_jarvis_proto_rawDescOnce sync.Once
@@ -271,10 +273,12 @@ var file_jarvis_proto_goTypes = []any{
 var file_jarvis_proto_depIdxs = []int32{
 	3, // 0: jarvis.v1.Response.result:type_name -> jarvis.v1.CommandResult
 	2, // 1: jarvis.v1.Request.command:type_name -> jarvis.v1.CommandRequest
-	1, // 2: jarvis.v1.CommandStream.ServerStream:input_type -> jarvis.v1.Request
-	0, // 3: jarvis.v1.CommandStream.ServerStream:output_type -> jarvis.v1.Response
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
+	1, // 2: jarvis.v1.Jarvis.Connect:input_type -> jarvis.v1.Request
+	2, // 3: jarvis.v1.Jarvis.RunCommand:input_type -> jarvis.v1.CommandRequest
+	0, // 4: jarvis.v1.Jarvis.Connect:output_type -> jarvis.v1.Response
+	3, // 5: jarvis.v1.Jarvis.RunCommand:output_type -> jarvis.v1.CommandResult
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name

@@ -18,20 +18,27 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	jarvisiov1 "github.com/motilayo/jarvis/controller/api/v1"
 
 	grpcClient "github.com/motilayo/jarvis/controller/client"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // CommandReconciler reconciles a Command object
@@ -46,6 +53,11 @@ var finalizer = "jarvis.io/finalizer"
 // +kubebuilder:rbac:groups=jarvis.io,resources=commands,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=jarvis.io,resources=commands/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=jarvis.io,resources=commands/finalizers,verbs=update
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=services;endpoints;nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
 func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 	cmd := &jarvisiov1.Command{}
@@ -81,40 +93,73 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	sliceList := &discoveryv1.EndpointSliceList{}
+	if err := r.List(ctx, sliceList,
+		client.InNamespace("jarvis"),
+		client.MatchingLabels{"kubernetes.io/service-name": "jarvis-agent"},
+	); err != nil {
+		log.Error(err, "failed to list EndpointSlices for jarvis-agent")
+		return ctrl.Result{}, err
+	}
+
+	nodeIP := map[string]string{}
+	for _, slice := range sliceList.Items {
+		for _, ep := range slice.Endpoints {
+			if ep.NodeName != nil && len(ep.Addresses) > 0 {
+				nodeIP[*ep.NodeName] = ep.Addresses[0]
+			}
+		}
+	}
+
 	selector := cmd.Spec.Selector
+
+	type target struct {
+		node string
+		ip   string
+	}
+	var targets []target
 	for _, node := range nodeList.Items {
 		if !matchNodeSelector(&node, selector) {
 			continue
 		}
 
-		var nodeIP string
-		for _, addr := range node.Status.Addresses {
-			if addr.Type == corev1.NodeInternalIP {
-				nodeIP = addr.Address
-				break
-			}
-		}
-		if nodeIP == "" {
-			log.Info("No InternalIP found for node", "node", node.Name)
+		ip, ok := nodeIP[node.Name]
+		if !ok || ip == "" {
+			r.Recorder.Eventf(cmd, corev1.EventTypeWarning, fmt.Sprintf("%s-%s", cmd.Name, node.Name),
+				"Agent not found for node %s (skipping)", node.Name)
 			continue
 		}
-
-		// Run command concurrently on each node
-		go func(nodeName, nodeIP string) {
-			// The agentclient.RunCommandOnNode helper is assumed to be available in the project
-			output, err := grpcClient.RunCommandOnNode(ctx, nodeIP, cmd.Spec.Command)
-			if err != nil {
-				log.Error(err, "Command execution failed", "node", nodeName)
-				r.Recorder.Eventf(cmd, corev1.EventTypeWarning, "CommandFailed",
-					"Failed to execute command on node %s: %v", nodeName, err)
-				return
-			}
-
-			log.Info("Command executed successfully", "node", nodeName, "output", output)
-			r.Recorder.Eventf(cmd, corev1.EventTypeNormal, "CommandResult",
-				"Node: %s | Output: %s", nodeName, output)
-		}(node.Name, nodeIP)
+		targets = append(targets, target{node: node.Name, ip: ip})
 	}
+
+	commandName := cmd.Name
+	commandStr := cmd.Spec.Command
+
+	go func() {
+		g, gctx := errgroup.WithContext(context.Background())
+		for _, target := range targets {
+			nodeName := target.node
+			ip := target.ip
+
+			// Fire one goroutine per node via errgroup
+			g.Go(func() error {
+				output, err := grpcClient.RunCommandOnNode(gctx, ip, nodeName, commandStr)
+				eventName := fmt.Sprintf("%s-%s", commandName, nodeName)
+				if err != nil {
+					r.Recorder.Eventf(cmd, corev1.EventTypeWarning, eventName, "Failed on %s: %v", nodeName, err)
+					return err
+				}
+				r.Recorder.Eventf(cmd, corev1.EventTypeNormal, eventName, "Output from %s:\n%s", nodeName, output)
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			log.Error(err, "one or more node executions failed")
+		} else {
+			log.Info("all node executions completed")
+		}
+	}()
 
 	return ctrl.Result{}, nil
 }
@@ -166,5 +211,20 @@ func (r *CommandReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&jarvisiov1.Command{}).
 		Named("command").
+		Watches(&discoveryv1.EndpointSlice{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+				if obj.GetName() == "jarvis-agent" {
+					return []reconcile.Request{
+						{
+							NamespacedName: types.NamespacedName{
+								Name:      obj.GetName(),
+								Namespace: obj.GetNamespace(),
+							},
+						},
+					}
+				}
+				return []reconcile.Request{}
+			},
+			)).
 		Complete(r)
 }

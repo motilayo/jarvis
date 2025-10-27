@@ -17,8 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CommandSpec defines the desired state of Command
@@ -26,7 +26,7 @@ type CommandSpec struct {
 	// Node selector
 	// +optional
 	Selector corev1.NodeSelector `json:"selector,omitempty"`
-	Command  string               `json:"command,omitempty"`
+	Command  string              `json:"command,omitempty"`
 }
 
 type CommandStatus struct {

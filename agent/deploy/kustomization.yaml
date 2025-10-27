@@ -3,3 +3,4 @@ resources:
 - ns.yaml
 - daemonset.yaml
 - serviceaccount.yaml
+- service.yaml

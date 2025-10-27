@@ -4,8 +4,9 @@ package jarvis.v1;
 
 option go_package = "github.com/motilayo/jarvis/agent";
 
-service CommandStream {
-  rpc ServerStream(stream Request) returns (stream Response);
+service Jarvis {
+  rpc Connect(stream Request) returns (stream Response);
+  rpc RunCommand(CommandRequest) returns (CommandResult);
 }
 
 message Response {

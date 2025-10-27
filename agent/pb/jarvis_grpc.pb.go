@@ -19,27 +19,29 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CommandStream_ServerStream_FullMethodName = "/jarvis.v1.CommandStream/ServerStream"
+	Jarvis_Connect_FullMethodName    = "/jarvis.v1.Jarvis/Connect"
+	Jarvis_RunCommand_FullMethodName = "/jarvis.v1.Jarvis/RunCommand"
 )
 
-// CommandStreamClient is the client API for CommandStream service.
+// JarvisClient is the client API for Jarvis service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type CommandStreamClient interface {
-	ServerStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, Response], error)
+type JarvisClient interface {
+	Connect(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, Response], error)
+	RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResult, error)
 }
 
-type commandStreamClient struct {
+type jarvisClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewCommandStreamClient(cc grpc.ClientConnInterface) CommandStreamClient {
-	return &commandStreamClient{cc}
+func NewJarvisClient(cc grpc.ClientConnInterface) JarvisClient {
+	return &jarvisClient{cc}
 }
 
-func (c *commandStreamClient) ServerStream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, Response], error) {
+func (c *jarvisClient) Connect(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, Response], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &CommandStream_ServiceDesc.Streams[0], CommandStream_ServerStream_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Jarvis_ServiceDesc.Streams[0], Jarvis_Connect_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,65 +50,102 @@ func (c *commandStreamClient) ServerStream(ctx context.Context, opts ...grpc.Cal
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type CommandStream_ServerStreamClient = grpc.BidiStreamingClient[Request, Response]
+type Jarvis_ConnectClient = grpc.BidiStreamingClient[Request, Response]
 
-// CommandStreamServer is the server API for CommandStream service.
-// All implementations must embed UnimplementedCommandStreamServer
-// for forward compatibility.
-type CommandStreamServer interface {
-	ServerStream(grpc.BidiStreamingServer[Request, Response]) error
-	mustEmbedUnimplementedCommandStreamServer()
+func (c *jarvisClient) RunCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandResult)
+	err := c.cc.Invoke(ctx, Jarvis_RunCommand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-// UnimplementedCommandStreamServer must be embedded to have
+// JarvisServer is the server API for Jarvis service.
+// All implementations must embed UnimplementedJarvisServer
+// for forward compatibility.
+type JarvisServer interface {
+	Connect(grpc.BidiStreamingServer[Request, Response]) error
+	RunCommand(context.Context, *CommandRequest) (*CommandResult, error)
+	mustEmbedUnimplementedJarvisServer()
+}
+
+// UnimplementedJarvisServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedCommandStreamServer struct{}
+type UnimplementedJarvisServer struct{}
 
-func (UnimplementedCommandStreamServer) ServerStream(grpc.BidiStreamingServer[Request, Response]) error {
-	return status.Errorf(codes.Unimplemented, "method ServerStream not implemented")
+func (UnimplementedJarvisServer) Connect(grpc.BidiStreamingServer[Request, Response]) error {
+	return status.Errorf(codes.Unimplemented, "method Connect not implemented")
 }
-func (UnimplementedCommandStreamServer) mustEmbedUnimplementedCommandStreamServer() {}
-func (UnimplementedCommandStreamServer) testEmbeddedByValue()                       {}
+func (UnimplementedJarvisServer) RunCommand(context.Context, *CommandRequest) (*CommandResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunCommand not implemented")
+}
+func (UnimplementedJarvisServer) mustEmbedUnimplementedJarvisServer() {}
+func (UnimplementedJarvisServer) testEmbeddedByValue()                {}
 
-// UnsafeCommandStreamServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to CommandStreamServer will
+// UnsafeJarvisServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to JarvisServer will
 // result in compilation errors.
-type UnsafeCommandStreamServer interface {
-	mustEmbedUnimplementedCommandStreamServer()
+type UnsafeJarvisServer interface {
+	mustEmbedUnimplementedJarvisServer()
 }
 
-func RegisterCommandStreamServer(s grpc.ServiceRegistrar, srv CommandStreamServer) {
-	// If the following call pancis, it indicates UnimplementedCommandStreamServer was
+func RegisterJarvisServer(s grpc.ServiceRegistrar, srv JarvisServer) {
+	// If the following call pancis, it indicates UnimplementedJarvisServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&CommandStream_ServiceDesc, srv)
+	s.RegisterService(&Jarvis_ServiceDesc, srv)
 }
 
-func _CommandStream_ServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(CommandStreamServer).ServerStream(&grpc.GenericServerStream[Request, Response]{ServerStream: stream})
+func _Jarvis_Connect_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(JarvisServer).Connect(&grpc.GenericServerStream[Request, Response]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type CommandStream_ServerStreamServer = grpc.BidiStreamingServer[Request, Response]
+type Jarvis_ConnectServer = grpc.BidiStreamingServer[Request, Response]
 
-// CommandStream_ServiceDesc is the grpc.ServiceDesc for CommandStream service.
+func _Jarvis_RunCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JarvisServer).RunCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Jarvis_RunCommand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JarvisServer).RunCommand(ctx, req.(*CommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Jarvis_ServiceDesc is the grpc.ServiceDesc for Jarvis service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var CommandStream_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "jarvis.v1.CommandStream",
-	HandlerType: (*CommandStreamServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+var Jarvis_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "jarvis.v1.Jarvis",
+	HandlerType: (*JarvisServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RunCommand",
+			Handler:    _Jarvis_RunCommand_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ServerStream",
-			Handler:       _CommandStream_ServerStream_Handler,
+			StreamName:    "Connect",
+			Handler:       _Jarvis_Connect_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

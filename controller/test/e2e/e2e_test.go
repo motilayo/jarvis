@@ -34,7 +34,7 @@ import (
 )
 
 // namespace where the project is deployed in
-const namespace = "controller-system"
+const namespace = "jarvis"
 
 // serviceAccountName created for the project
 const serviceAccountName = "controller-controller-manager"

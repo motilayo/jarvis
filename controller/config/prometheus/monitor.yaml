@@ -6,8 +6,8 @@ metadata:
     control-plane: controller-manager
     app.kubernetes.io/name: controller
     app.kubernetes.io/managed-by: kustomize
-  name: controller-manager-metrics-monitor
-  namespace: system
+  name: jarvis-controller-metrics-monitor
+  namespace: jarvis
 spec:
   endpoints:
     - path: /metrics
