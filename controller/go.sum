@@ -94,6 +94,8 @@ github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee h1:W5t00kpgFd
 github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/motilayo/jarvis/agent v0.0.0-20251023023611-c24ac565d30b h1:t+lSQUnvDZ+bndhjmjslkR2EqjqpeUZUQfyOERs2p/Y=
 github.com/motilayo/jarvis/agent v0.0.0-20251023023611-c24ac565d30b/go.mod h1:e9hx8jiya7xuNFcEAKnvdUTGOu8SAkOVx8kH12n4TNc=
+github.com/motilayo/jarvis/agent v0.0.0-20251027020933-abda6b924a17 h1:qyG82pcKSWmHPuA3lflyCXHca/xealcHy1jUx3sA+do=
+github.com/motilayo/jarvis/agent v0.0.0-20251027020933-abda6b924a17/go.mod h1:e9hx8jiya7xuNFcEAKnvdUTGOu8SAkOVx8kH12n4TNc=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/onsi/ginkgo/v2 v2.22.0 h1:Yed107/8DjTr0lKCNt7Dn8yQ6ybuDRQoMGrNFKzMfHg=

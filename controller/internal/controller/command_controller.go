@@ -149,7 +149,7 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 					r.Recorder.Eventf(cmd, corev1.EventTypeWarning, eventName, "Failed on %s: %v", nodeName, err)
 					return err
 				}
-				r.Recorder.Eventf(cmd, corev1.EventTypeNormal, eventName, "Output from %s:\n%s", nodeName, output)
+				r.Recorder.Eventf(cmd, corev1.EventTypeNormal, eventName, "Output from %s: %s", nodeName, output)
 				return nil
 			})
 		}

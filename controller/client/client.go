@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	pb "github.com/motilayo/jarvis/agent/pb"
@@ -31,6 +32,12 @@ func RunCommandOnNode(ctx context.Context, nodeIP, nodeName, command string) (st
 		return "", fmt.Errorf("RunCommand(): %w", err)
 	}
 
-	output := fmt.Sprintf("[%s] ❯ %s\n%s", nodeName, req.Cmd, resp.Output)
+	formattedOutput := strings.TrimSpace(resp.Output)
+	formattedOutput = strings.NewReplacer("\r\n", " | ", "\n", " | ", "\r", " | ").Replace(formattedOutput)
+	if formattedOutput == "" {
+		formattedOutput = "<no output>"
+	}
+
+	output := fmt.Sprintf("[%s] ❯ %s | %s", nodeName, req.Cmd, formattedOutput)
 	return output, nil
 }
