@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -58,11 +59,17 @@ func ExecCommand(command *pb.CommandRequest) *pb.CommandResult {
 	result := &pb.CommandResult{Id: command.Id}
 
 	cmd := command.GetCmd()
-	out, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	out, err := exec.Command("chroot", "/host", "sh", "-c", cmd).CombinedOutput()
 	exit := 0
 	if err != nil {
-		exit = 1
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exit = exitErr.ExitCode()
+		} else {
+			exit = 1
+			out = append(out, []byte(fmt.Sprintf("failed to execute command: %v", err))...)
+		}
 	}
+
 	result.Output = string(out)
 	result.ExitCode = int32(exit)
 

@@ -14,6 +14,8 @@ spec:
       labels:
         app: jarvis-agent
     spec:
+      tolerations:
+        - operator: Exists
       hostPID: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -32,6 +34,9 @@ spec:
           volumeMounts:
             - name: var-run
               mountPath: /var/run
+            - name: host-root
+              mountPath: /host
+              readOnly: true
           securityContext:
             privileged: true
       volumes:
@@ -39,4 +44,8 @@ spec:
           hostPath:
             path: /var/run
             type: DirectoryOrCreate
+        - name: host-root
+          hostPath:
+            path: /
+            type: Directory
       serviceAccountName: jarvis-agent

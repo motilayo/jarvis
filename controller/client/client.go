@@ -32,12 +32,11 @@ func RunCommandOnNode(ctx context.Context, nodeIP, nodeName, command string) (st
 		return "", fmt.Errorf("RunCommand(): %w", err)
 	}
 
-	formattedOutput := strings.TrimSpace(resp.Output)
-	formattedOutput = strings.NewReplacer("\r\n", " | ", "\n", " | ", "\r", " | ").Replace(formattedOutput)
-	if formattedOutput == "" {
+	formattedOutput := strings.TrimRight(resp.Output, "\r\n")
+	if strings.TrimSpace(formattedOutput) == "" {
 		formattedOutput = "<no output>"
 	}
 
-	output := fmt.Sprintf("[%s] ❯ %s | %s", nodeName, req.Cmd, formattedOutput)
+	output := fmt.Sprintf("❯ %s\n%s", req.Cmd, formattedOutput)
 	return output, nil
 }

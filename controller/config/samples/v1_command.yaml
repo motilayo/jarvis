@@ -7,7 +7,7 @@ metadata:
   name: command-sample
   namespace: jarvis
 spec:
-  command: curl -k google.com
+  command: ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 10
   selector:
     nodeSelectorTerms:
       - matchExpressions:

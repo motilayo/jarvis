@@ -125,8 +125,9 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		ip, ok := nodeIP[node.Name]
 		if !ok || ip == "" {
-			r.Recorder.Eventf(cmd, corev1.EventTypeWarning, fmt.Sprintf("%s-%s", cmd.Name, node.Name),
-				"Agent not found for node %s (skipping)", node.Name)
+			eventName := fmt.Sprintf("%s-%s", cmd.Name, node.Name)
+			msg := fmt.Sprintf("Agent not found for node %s (skipping)", node.Name)
+			r.Recorder.Event(cmd, corev1.EventTypeWarning, eventName, msg)
 			continue
 		}
 		targets = append(targets, target{node: node.Name, ip: ip})
@@ -146,10 +147,12 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				output, err := grpcClient.RunCommandOnNode(gctx, ip, nodeName, commandStr)
 				eventName := fmt.Sprintf("%s-%s", commandName, nodeName)
 				if err != nil {
-					r.Recorder.Eventf(cmd, corev1.EventTypeWarning, eventName, "Failed on %s: %v", nodeName, err)
+					msg := fmt.Sprintf("Failed on %s: %v", nodeName, err)
+					r.Recorder.Event(cmd, corev1.EventTypeWarning, eventName, msg)
 					return err
 				}
-				r.Recorder.Eventf(cmd, corev1.EventTypeNormal, eventName, "Output from %s: %s", nodeName, output)
+				msg := fmt.Sprintf("%s", output)
+				r.Recorder.Event(cmd, corev1.EventTypeNormal, eventName, msg)
 				return nil
 			})
 		}
