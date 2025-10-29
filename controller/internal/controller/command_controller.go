@@ -119,7 +119,7 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	var targets []target
 	for _, node := range nodeList.Items {
-		if !matchNodeSelector(&node, selector) {
+		if len(selector.NodeSelectorTerms) > 0 && !matchNodeSelector(&node, selector) {
 			continue
 		}
 
@@ -151,8 +151,7 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 					r.Recorder.Event(cmd, corev1.EventTypeWarning, eventName, msg)
 					return err
 				}
-				msg := fmt.Sprintf("%s", output)
-				r.Recorder.Event(cmd, corev1.EventTypeNormal, eventName, msg)
+				r.Recorder.Event(cmd, corev1.EventTypeNormal, eventName, output)
 				return nil
 			})
 		}

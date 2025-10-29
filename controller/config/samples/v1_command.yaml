@@ -7,9 +7,9 @@ metadata:
   name: command-sample
   namespace: jarvis
 spec:
-  command: ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 10
-  selector:
-    nodeSelectorTerms:
-      - matchExpressions:
-          - key: node-role.kubernetes.io/control-plane
-            operator: DoesNotExist
+  command: ps -eo pid,comm,%cpu,%mem --sort=-%cpu
+  # selector:
+  #   nodeSelectorTerms:
+  #     - matchExpressions:
+  #         - key: node-role.kubernetes.io/control-plane
+  #           operator: DoesNotExist
