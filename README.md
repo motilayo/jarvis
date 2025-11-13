@@ -5,7 +5,6 @@ Jarvis is a Kubernetes-native system for securely executing shell commands acros
 ## Architecture
 - **Controller**: Watches for `Command` custom resources and orchestrates command execution on selected nodes.
 - **Agent**: Runs as a DaemonSet on every node, exposes a gRPC server to execute shell commands and return results.
-- **CRDs**: Defines the `Command` resource for specifying commands and node selectors.
 
 ## Repository Structure
 - `agent/`: gRPC agent source, Dockerfile, deployment manifests
@@ -42,20 +41,18 @@ Jarvis is a Kubernetes-native system for securely executing shell commands acros
      ```
 3. **Create a Command resource**:
    - Example:
-     ```yaml
-     apiVersion: jarvis.io/v1
-     kind: Command
-     metadata:
-       name: sample-command
-     spec:
-       command: "hostname"
-       selector:
-         nodeSelectorTerms:
-           - matchExpressions:
-               - key: kubernetes.io/hostname
-                 operator: In
-                 values: ["node-1"]
-     ```
+      ```yaml
+      apiVersion: jarvis.io/v1
+      kind: Command
+      metadata:
+        labels:
+          app.kubernetes.io/name: controller
+          app.kubernetes.io/managed-by: kustomize
+        name: command-sample
+        namespace: jarvis
+      spec:
+        command: ps -eo pid,comm,%cpu,%mem --sort=-%cpu
+      ```
    - Apply with:
      ```sh
      kubectl apply -f <your-command>.yaml
@@ -67,22 +64,25 @@ Jarvis is a Kubernetes-native system for securely executing shell commands acros
 - **Spec fields**:
   - `command` – required shell string executed via `/bin/sh -c` inside the agent (currently chrooted to `/host` to use node binaries).
   - `selector` – optional `NodeSelector`; omit to target all nodes.
-  - `timeoutSeconds` – (planned) execution timeout per node.
 
-Example CR (`controller/config/samples/v1_command.yaml`):
+Example:
 ```yaml
 apiVersion: jarvis.io/v1
 kind: Command
 metadata:
-  name: command-sample
+  name: kubelet-status
+  namespace: jarvis
 spec:
-  command: ps -eo pid,comm,%cpu,%mem --sort=-%cpu | head -n 10
+  command: ctr namespace ls #containerd list namespaces
   selector:
-    nodeSelectorTerms:
-      - matchExpressions:
-          - key: kubernetes.io/os
-            operator: In
-            values: ["linux"]
+    matchLabels:
+      kubernetes.io/os: linux
+    matchExpressions:
+      - key: kubernetes.io/hostname
+        operator: In
+        values:
+          - kind-control-plane
+          - kind-worker
 ```
 
 ## Event Flow
@@ -144,7 +144,7 @@ message: |-
       272 containerd-shim  0.0  0.2
 ```
 
-Event is also published to the resource
+Events are also published to the resource
 
 ```
 ❯ k describe command -n jarvis
@@ -269,7 +269,7 @@ Events:
   14202 ps               0.0  0.0
 ```
 
-This event-driven reporting makes it easy to audit multi-node execution without tailing logs; cluster operators can fetch the latest output with native Kubernetes tooling.
+This reporting makes it easy to audit multi-node execution without tailing logs; cluster operators can fetch the latest output with native Kubernetes tooling.
 
 ## Development
 - Go modules for both agent and controller
