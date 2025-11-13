@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -39,6 +38,7 @@ import (
 	grpcClient "github.com/motilayo/jarvis/controller/client"
 
 	"golang.org/x/sync/errgroup"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CommandReconciler reconciles a Command object
@@ -87,8 +87,10 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log.Info("Reconciling Command", "name", cmd.Name, "namespace", cmd.Namespace, "command", cmd.Spec.Command)
 
 	// Step 1: Get all nodes in the cluster
+
 	nodeList := &corev1.NodeList{}
-	if err := r.List(ctx, nodeList); err != nil {
+	selector, _ := metav1.LabelSelectorAsSelector(&cmd.Spec.Selector)
+	if err := r.List(ctx, nodeList, &client.ListOptions{LabelSelector: selector}); err != nil {
 		log.Error(err, "Failed to list nodes")
 		return ctrl.Result{}, err
 	}
@@ -111,17 +113,12 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	selector := cmd.Spec.Selector
-
 	type target struct {
 		node string
 		ip   string
 	}
 	var targets []target
 	for _, node := range nodeList.Items {
-		if len(selector.NodeSelectorTerms) > 0 && !matchNodeSelector(&node, selector) {
-			continue
-		}
 
 		ip, ok := nodeIP[node.Name]
 		if !ok || ip == "" {
@@ -164,47 +161,6 @@ func (r *CommandReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}()
 
 	return ctrl.Result{}, nil
-}
-
-func matchNodeSelector(node *corev1.Node, selector corev1.NodeSelector) bool {
-	labelsMap := labels.Set(node.Labels)
-
-	for _, term := range selector.NodeSelectorTerms {
-		matchedTerm := true
-		for _, expr := range term.MatchExpressions {
-			switch expr.Operator {
-			case corev1.NodeSelectorOpIn:
-				if !labelsMap.Has(expr.Key) || !contains(expr.Values, labelsMap[expr.Key]) {
-					matchedTerm = false
-				}
-			case corev1.NodeSelectorOpNotIn:
-				if labelsMap.Has(expr.Key) && contains(expr.Values, labelsMap[expr.Key]) {
-					matchedTerm = false
-				}
-			case corev1.NodeSelectorOpExists:
-				if !labelsMap.Has(expr.Key) {
-					matchedTerm = false
-				}
-			case corev1.NodeSelectorOpDoesNotExist:
-				if labelsMap.Has(expr.Key) {
-					matchedTerm = false
-				}
-			}
-		}
-		if matchedTerm {
-			return true // Node matches at least one term
-		}
-	}
-	return false
-}
-
-func contains(arr []string, s string) bool {
-	for _, v := range arr {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
 
 // SetupWithManager sets up the controller with the Manager.

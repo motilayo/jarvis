@@ -1,0 +1,10 @@
+apiVersion: jarvis.io/v1
+kind: Command
+metadata:
+  name: kubelet-status
+  namespace: jarvis
+spec:
+  command: systemctl status kubelet
+  selector:
+   matchLabels:
+    kubernetes.io/hostname: kind-control-plane
